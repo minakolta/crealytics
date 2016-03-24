@@ -38,7 +38,7 @@ class Modifier
 	INT_VALUES = ['Clicks', 'Impressions', 'ACCOUNT - Clicks', 'CAMPAIGN - Clicks', 'BRAND - Clicks', 'BRAND+CATEGORY - Clicks', 'ADGROUP - Clicks', 'KEYWORD - Clicks']
 	FLOAT_VALUES = ['Avg CPC', 'CTR', 'Est EPC', 'newBid', 'Costs', 'Avg Pos']
 
-  LINES_PER_FILE = 10000
+  LINES_PER_FILE = 1000
 
 	def initialize(saleamount_factor, cancellation_factor)
 		@saleamount_factor = saleamount_factor
@@ -69,18 +69,19 @@ class Modifier
     done = false
     file_index = 0
     file_name = output.gsub('.txt', '')
+    @headers = merger.next.keys
     while not done do
 		  CSV.open(file_name + "_#{file_index}.txt", "wb", { :col_sep => "\t", :headers => :first_row, :row_sep => "\r\n" }) do |csv|
 			  headers_written = false
         line_count = 0
 			  while line_count < LINES_PER_FILE
-				  begin
-					  merged = merger.next
+				  begin					  
 					  if not headers_written
-						  csv << merged.keys
+						  csv << @headers
 						  headers_written = true
               line_count +=1
 					  end
+					  merged = merger.next
 					  csv << merged
             line_count +=1
 				  rescue StopIteration
@@ -159,7 +160,7 @@ class Modifier
 
 	def write(content, headers, output)
 		CSV.open(output, "wb", { :col_sep => "\t", :headers => :first_row, :row_sep => "\r\n" }) do |csv|
-			csv << headers
+			csv << @headers
 			content.each do |row|
 				csv << row
 			end
@@ -168,16 +169,11 @@ class Modifier
 
 	public
 	def sort(file)
-		# Benchmarking
-		start_time = Time.now
-		output = "#{file}.sorted"
+		output = "#{file}.sorted.txt"
 		content_as_table = parse(file)
-		headers = content_as_table.headers
 		index_of_key = headers.index('Clicks')
 		content = content_as_table.sort_by { |a| -a[index_of_key].to_i }
 		write(content, headers, output)
-		write_time = Time.now
-		puts "Write + parse +  Time elapsed #{(write_time - start_time) * 1000} ms (#{(write_time - start_time)} s)"
 		return output
 	end
 end
