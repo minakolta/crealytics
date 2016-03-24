@@ -69,29 +69,33 @@ class Modifier
     done = false
     file_index = 0
     file_name = output.gsub('.txt', '')
-    @headers = merger.next.keys
-    while not done do
-		  CSV.open(file_name + "_#{file_index}.txt", "wb", { :col_sep => "\t", :headers => :first_row, :row_sep => "\r\n" }) do |csv|
-			  headers_written = false
-        line_count = 0
-			  while line_count < LINES_PER_FILE
-				  begin					  
-					  if not headers_written
-						  csv << @headers
-						  headers_written = true
-              line_count +=1
+    writing = Thread.new do
+    	while not done do
+			  CSV.open(file_name + "_#{file_index}.txt", "wb", { :col_sep => "\t", :headers => :first_row, :row_sep => "\r\n" }) do |csv|
+				  headers_written = false
+	        line_count = 0
+				  while line_count < LINES_PER_FILE
+					  begin					  
+						  merged = merger.next
+						  if not headers_written
+							  csv << merged.keys
+							  headers_written = true
+	              line_count +=1
+						  end
+						  
+						  csv << merged
+	            line_count +=1
+					  rescue StopIteration
+	            done = true
+						  break
 					  end
-					  merged = merger.next
-					  csv << merged
-            line_count +=1
-				  rescue StopIteration
-            done = true
-					  break
 				  end
+	        file_index += 1
 			  end
-        file_index += 1
-		  end
+	    end
     end
+    writing.abort_on_exception = true
+    writing.join
 	end
 
 	private
@@ -160,7 +164,7 @@ class Modifier
 
 	def write(content, headers, output)
 		CSV.open(output, "wb", { :col_sep => "\t", :headers => :first_row, :row_sep => "\r\n" }) do |csv|
-			csv << @headers
+			csv << headers
 			content.each do |row|
 				csv << row
 			end
@@ -169,10 +173,12 @@ class Modifier
 
 	public
 	def sort(file)
-		output = "#{file}.sorted.txt"
+		output = "#{file}.sorted"
 		content_as_table = parse(file)
+		headers = content_as_table.headers
 		index_of_key = headers.index('Clicks')
 		content = content_as_table.sort_by { |a| -a[index_of_key].to_i }
+		
 		write(content, headers, output)
 		return output
 	end
