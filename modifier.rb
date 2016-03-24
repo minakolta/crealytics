@@ -1,6 +1,7 @@
 require File.expand_path('lib/combiner',File.dirname(__FILE__))
 require 'csv'
 require 'date'
+require 'thread'
 
 def latest(name)
   files = Dir["#{ ENV["HOME"] }/workspace/*#{name}*.txt"]
@@ -163,12 +164,14 @@ class Modifier
 	end
 
 	def write(content, headers, output)
-		CSV.open(output, "wb", { :col_sep => "\t", :headers => :first_row, :row_sep => "\r\n" }) do |csv|
-			csv << headers
-			content.each do |row|
-				csv << row
+		Thread.new do
+			CSV.open(output, "wb", { :col_sep => "\t", :headers => :first_row, :row_sep => "\r\n" }) do |csv|
+				csv << headers
+				content.each do |row|
+					csv << row
+				end
 			end
-		end
+		end.join
 	end
 
 	public
@@ -178,7 +181,6 @@ class Modifier
 		headers = content_as_table.headers
 		index_of_key = headers.index('Clicks')
 		content = content_as_table.sort_by { |a| -a[index_of_key].to_i }
-		
 		write(content, headers, output)
 		return output
 	end
