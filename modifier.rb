@@ -38,7 +38,7 @@ class Modifier
 	INT_VALUES = ['Clicks', 'Impressions', 'ACCOUNT - Clicks', 'CAMPAIGN - Clicks', 'BRAND - Clicks', 'BRAND+CATEGORY - Clicks', 'ADGROUP - Clicks', 'KEYWORD - Clicks']
 	FLOAT_VALUES = ['Avg CPC', 'CTR', 'Est EPC', 'newBid', 'Costs', 'Avg Pos']
 
-  LINES_PER_FILE = 1000
+  LINES_PER_FILE = 10000
 
 	def initialize(saleamount_factor, cancellation_factor)
 		@saleamount_factor = saleamount_factor
@@ -168,12 +168,16 @@ class Modifier
 
 	public
 	def sort(file)
+		# Benchmarking
+		start_time = Time.now
 		output = "#{file}.sorted"
 		content_as_table = parse(file)
 		headers = content_as_table.headers
 		index_of_key = headers.index('Clicks')
 		content = content_as_table.sort_by { |a| -a[index_of_key].to_i }
 		write(content, headers, output)
+		write_time = Time.now
+		puts "Write + parse +  Time elapsed #{(write_time - start_time) * 1000} ms (#{(write_time - start_time)} s)"
 		return output
 	end
 end
