@@ -1,7 +1,6 @@
-require File.expand_path('lib/combiner',File.dirname(__FILE__))
+require File.expand_path('combiner',File.dirname(__FILE__))
 require 'csv'
 require 'date'
-require 'thread'
 
 def latest(name)
   files = Dir["#{ ENV["HOME"] }/workspace/*#{name}*.txt"]
@@ -39,7 +38,7 @@ class Modifier
 	INT_VALUES = ['Clicks', 'Impressions', 'ACCOUNT - Clicks', 'CAMPAIGN - Clicks', 'BRAND - Clicks', 'BRAND+CATEGORY - Clicks', 'ADGROUP - Clicks', 'KEYWORD - Clicks']
 	FLOAT_VALUES = ['Avg CPC', 'CTR', 'Est EPC', 'newBid', 'Costs', 'Avg Pos']
 
-  LINES_PER_FILE = 1000
+  LINES_PER_FILE = 120000
 
 	def initialize(saleamount_factor, cancellation_factor)
 		@saleamount_factor = saleamount_factor
@@ -70,33 +69,28 @@ class Modifier
     done = false
     file_index = 0
     file_name = output.gsub('.txt', '')
-    writing = Thread.new do
-    	while ! done do
-			  CSV.open(file_name + "_#{file_index}.txt", "wb", { :col_sep => ",", :headers => :first_row, :row_sep => "\r\n" }) do |csv|
-				  headers_written = false
-	        line_count = 0
-				  while line_count < LINES_PER_FILE
-					  begin					  
-						  merged = merger.next
-						  if ! headers_written
-							  csv << merged.keys
-							  headers_written = true
-	              line_count +=1
-						  end
-						  
-						  csv << merged
-	            line_count +=1
-					  rescue StopIteration
-	            done = true
-						  break
+    until done do
+		  CSV.open(file_name + "_#{file_index}.txt", "wb", { :col_sep => "\t", :headers => :first_row, :row_sep => "\r\n" }) do |csv|
+			  headers_written = false
+        line_count = 0
+			  while line_count < LINES_PER_FILE
+				  begin
+					  merged = merger.next
+					  if not headers_written
+						  csv << merged.keys
+						  headers_written = true
+              line_count +=1
 					  end
+					  csv << merged
+            line_count +=1
+				  rescue StopIteration
+            done = true
+					  break
 				  end
-	        file_index += 1
 			  end
-	    end
+        file_index += 1
+		  end
     end
-    writing.abort_on_exception = true
-    writing.join
 	end
 
 	private
@@ -110,7 +104,6 @@ class Modifier
 	end
 
 	def combine_values(hash)
-		puts hash.inspcet
 		LAST_VALUE_WINS.each do |key|
 			hash[key] = hash[key].last
 		end
@@ -150,7 +143,7 @@ class Modifier
 		result
 	end
 
-	DEFAULT_CSV_OPTIONS = { :col_sep => ",", :headers => :first_row }
+	DEFAULT_CSV_OPTIONS = { :col_sep => "\t", :headers => :first_row }
 
 	def parse(file)
 		CSV.read(file, DEFAULT_CSV_OPTIONS)
@@ -165,15 +158,12 @@ class Modifier
 	end
 
 	def write(content, headers, output)
-		Thread.new do
-			CSV.open(output, "wb", { :col_sep => ",", :headers => :first_row, :row_sep => "\r\n" }) do |csv|
-				puts headers.inspect
-				csv << headers
-				content.each do |row|
-					csv << row
-				end
+		CSV.open(output, "wb", { :col_sep => "\t", :headers => :first_row, :row_sep => "\r\n" }) do |csv|
+			csv << headers
+			content.each do |row|
+				csv << row
 			end
-		end.join
+		end
 	end
 
 	public
@@ -187,11 +177,3 @@ class Modifier
 		return output
 	end
 end
-
-modified = input = latest('project_2012-07-27_2012-10-10_performancedata')
-modification_factor = 1
-cancellaction_factor = 0.4
-modifier = Modifier.new(modification_factor, cancellaction_factor)
-modifier.modify(modified, input)
-
-puts "DONE modifying"
