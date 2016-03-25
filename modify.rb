@@ -9,3 +9,4 @@ modifier = Modifier.new(modification_factor, cancellaction_factor)
 modifier.modify(modified, input)
 
 puts "DONE modifying"
+	
