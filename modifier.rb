@@ -71,14 +71,14 @@ class Modifier
     file_index = 0
     file_name = output.gsub('.txt', '')
     writing = Thread.new do
-    	while not done do
-			  CSV.open(file_name + "_#{file_index}.txt", "wb", { :col_sep => "\t", :headers => :first_row, :row_sep => "\r\n" }) do |csv|
+    	while ! done do
+			  CSV.open(file_name + "_#{file_index}.txt", "wb", { :col_sep => ",", :headers => :first_row, :row_sep => "\r\n" }) do |csv|
 				  headers_written = false
 	        line_count = 0
 				  while line_count < LINES_PER_FILE
 					  begin					  
 						  merged = merger.next
-						  if not headers_written
+						  if ! headers_written
 							  csv << merged.keys
 							  headers_written = true
 	              line_count +=1
@@ -110,6 +110,7 @@ class Modifier
 	end
 
 	def combine_values(hash)
+		puts hash.inspcet
 		LAST_VALUE_WINS.each do |key|
 			hash[key] = hash[key].last
 		end
@@ -149,7 +150,7 @@ class Modifier
 		result
 	end
 
-	DEFAULT_CSV_OPTIONS = { :col_sep => "\t", :headers => :first_row }
+	DEFAULT_CSV_OPTIONS = { :col_sep => ",", :headers => :first_row }
 
 	def parse(file)
 		CSV.read(file, DEFAULT_CSV_OPTIONS)
@@ -165,7 +166,8 @@ class Modifier
 
 	def write(content, headers, output)
 		Thread.new do
-			CSV.open(output, "wb", { :col_sep => "\t", :headers => :first_row, :row_sep => "\r\n" }) do |csv|
+			CSV.open(output, "wb", { :col_sep => ",", :headers => :first_row, :row_sep => "\r\n" }) do |csv|
+				puts headers.inspect
 				csv << headers
 				content.each do |row|
 					csv << row
