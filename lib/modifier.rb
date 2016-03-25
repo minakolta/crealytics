@@ -33,14 +33,13 @@ class Float
 end
 
 class Modifier
-
-	KEYWORD_UNIQUE_ID = 'Keyword Unique ID'
-	LAST_VALUE_WINS = ['Account ID', 'Account Name', 'Campaign', 'Ad Group', 'Keyword', 'Keyword Type', 'Subid', 'Paused', 'Max CPC', 'Keyword Unique ID', 'ACCOUNT', 'CAMPAIGN', 'BRAND', 'BRAND+CATEGORY', 'ADGROUP', 'KEYWORD']
-	LAST_REAL_VALUE_WINS = ['Last Avg CPC', 'Last Avg Pos']
-	INT_VALUES = ['Clicks', 'Impressions', 'ACCOUNT - Clicks', 'CAMPAIGN - Clicks', 'BRAND - Clicks', 'BRAND+CATEGORY - Clicks', 'ADGROUP - Clicks', 'KEYWORD - Clicks']
-	FLOAT_VALUES = ['Avg CPC', 'CTR', 'Est EPC', 'newBid', 'Costs', 'Avg Pos']
-
-  LINES_PER_FILE = 120000
+	@@keyword_unque_id = 'Keyword Unique ID'
+	@@last_value_wins = ['Account ID', 'Account Name', 'Campaign', 'Ad Group', 'Keyword', 'Keyword Type', 'Subid', 'Paused', 'Max CPC', 'Keyword Unique ID', 'ACCOUNT', 'CAMPAIGN', 'BRAND', 'BRAND+CATEGORY', 'ADGROUP', 'KEYWORD']
+	@@last_real_value_wins = ['Last Avg CPC', 'Last Avg Pos']
+	@@int_values = ['Clicks', 'Impressions', 'ACCOUNT - Clicks', 'CAMPAIGN - Clicks', 'BRAND - Clicks', 'BRAND+CATEGORY - Clicks', 'ADGROUP - Clicks', 'KEYWORD - Clicks']
+	@@float_value = ['Avg CPC', 'CTR', 'Est EPC', 'newBid', 'Costs', 'Avg Pos']
+  @@lines_per_file = 120000
+	@@csv_options = { :col_sep => "\t", :headers => :first_row }
 
 	def initialize(saleamount_factor, cancellation_factor)
 		@saleamount_factor = saleamount_factor
@@ -49,11 +48,10 @@ class Modifier
 
 	def modify(output, input)
 		input = sort(input)
-
 		input_enumerator = lazy_read(input)
 
 		combiner = Combiner.new do |value|
-			value[KEYWORD_UNIQUE_ID]
+			value[@@keyword_unque_id]
 		end.combine(input_enumerator)
 
 		merger = Enumerator.new do |yielder|
@@ -71,33 +69,28 @@ class Modifier
     done = false
     file_index = 0
     file_name = output.gsub('.txt', '')
-    # writing_files = Thread.new do
-	    until done do
-			  CSV.open(file_name + "_#{file_index}.txt", "wb", { :col_sep => "\t", :headers => :first_row, :row_sep => "\r\n" }) do |csv|
-				  headers_written = false
-	        line_count = 0
-				  while line_count < LINES_PER_FILE
-					  begin
-						  merged = merger.next
-						  until headers_written
-							  csv << merged.keys
-							  headers_written = true
-	              line_count +=1
-						  end
-						  csv << merged
-	            line_count +=1
-					  rescue StopIteration
-	            done = true
-						  break
+    until done do
+		  CSV.open(file_name + "_#{file_index}.txt", "wb", { :col_sep => "\t", :headers => :first_row, :row_sep => "\r\n" }) do |csv|
+			  headers_written = false
+        line_count = 0
+			  while line_count < @@lines_per_file
+				  begin
+					  merged = merger.next
+					  until headers_written
+						  csv << merged.keys
+						  headers_written = true
+              line_count +=1
 					  end
+					  csv << merged
+            line_count +=1
+				  rescue StopIteration
+            done = true
+					  break
 				  end
-	        file_index += 1
 			  end
-	    end
-    # end
-    # writing_files.abort_on_exception = true
-    # writing_files.join
-
+        file_index += 1
+		  end
+    end
 	end
 
 	private
@@ -111,16 +104,16 @@ class Modifier
 	end
 
 	def combine_values(hash)
-		LAST_VALUE_WINS.each do |key|
+		@@last_value_wins.each do |key|
 			hash[key] = hash[key].last
 		end
-		LAST_REAL_VALUE_WINS.each do |key|
+		@@last_real_value_wins.each do |key|
 			hash[key] = hash[key].select {|v| !(v.nil? || v == 0 || v == '0' || v == '')}.last
 		end
-		INT_VALUES.each do |key|
+		@@int_values.each do |key|
 			hash[key] = hash[key][0].to_s
 		end
-		FLOAT_VALUES.each do |key|
+		@@float_value.each do |key|
 			hash[key] = hash[key][0].from_german_to_f.to_german_s
 		end
 		['number of commissions'].each do |key|
@@ -150,15 +143,13 @@ class Modifier
 		result
 	end
 
-	DEFAULT_CSV_OPTIONS = { :col_sep => "\t", :headers => :first_row }
-
 	def parse(file)
-		CSV.read(file, DEFAULT_CSV_OPTIONS)
+		CSV.read(file, @@csv_options)
 	end
 
 	def lazy_read(file)
 		Enumerator.new do |yielder|
-			CSV.foreach(file, DEFAULT_CSV_OPTIONS) do |row|
+			CSV.foreach(file, @@csv_options) do |row|
 				yielder.yield(row)
 			end
 		end
@@ -173,7 +164,6 @@ class Modifier
 		end
 	end
 
-	public
 	def sort(file)
 		output = "#{file}.sorted"
 		content_as_table = parse(file)
