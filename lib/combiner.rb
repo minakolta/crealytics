@@ -18,9 +18,9 @@ class Combiner
 		Enumerator.new do |yielder|
 			last_values = Array.new(enumerators.size)
 			done = enumerators.all? { |enumerator| enumerator.nil? }
-			while not done
+			until done
 				last_values.each_with_index do |value, index|
-					if value.nil? and not enumerators[index].nil?
+					if value.nil? and ! enumerators[index].nil?
 						begin
 							last_values[index] = enumerators[index].next
 						rescue StopIteration

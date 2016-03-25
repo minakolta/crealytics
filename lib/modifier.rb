@@ -20,13 +20,15 @@ end
 
 class String
 	def from_german_to_f
-		self.gsub(',', '.').to_f
+		# self is not needed
+		gsub(',', '.').to_f
 	end
 end
 
 class Float
 	def to_german_s
-		self.to_s.gsub('.', ',')
+		# self is not needed
+		to_s.gsub('.', ',')
 	end
 end
 
@@ -76,7 +78,7 @@ class Modifier
 			  while line_count < LINES_PER_FILE
 				  begin
 					  merged = merger.next
-					  if not headers_written
+					  until headers_written
 						  csv << merged.keys
 						  headers_written = true
               line_count +=1
@@ -108,7 +110,7 @@ class Modifier
 			hash[key] = hash[key].last
 		end
 		LAST_REAL_VALUE_WINS.each do |key|
-			hash[key] = hash[key].select {|v| not (v.nil? or v == 0 or v == '0' or v == '')}.last
+			hash[key] = hash[key].select {|v| !(v.nil? || v == 0 || v == '0' || v == '')}.last
 		end
 		INT_VALUES.each do |key|
 			hash[key] = hash[key][0].to_s
