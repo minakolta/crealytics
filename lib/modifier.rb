@@ -71,28 +71,33 @@ class Modifier
     done = false
     file_index = 0
     file_name = output.gsub('.txt', '')
-    until done do
-		  CSV.open(file_name + "_#{file_index}.txt", "wb", { :col_sep => "\t", :headers => :first_row, :row_sep => "\r\n" }) do |csv|
-			  headers_written = false
-        line_count = 0
-			  while line_count < LINES_PER_FILE
-				  begin
-					  merged = merger.next
-					  until headers_written
-						  csv << merged.keys
-						  headers_written = true
-              line_count +=1
+    # writing_files = Thread.new do
+	    until done do
+			  CSV.open(file_name + "_#{file_index}.txt", "wb", { :col_sep => "\t", :headers => :first_row, :row_sep => "\r\n" }) do |csv|
+				  headers_written = false
+	        line_count = 0
+				  while line_count < LINES_PER_FILE
+					  begin
+						  merged = merger.next
+						  until headers_written
+							  csv << merged.keys
+							  headers_written = true
+	              line_count +=1
+						  end
+						  csv << merged
+	            line_count +=1
+					  rescue StopIteration
+	            done = true
+						  break
 					  end
-					  csv << merged
-            line_count +=1
-				  rescue StopIteration
-            done = true
-					  break
 				  end
+	        file_index += 1
 			  end
-        file_index += 1
-		  end
-    end
+	    end
+    # end
+    # writing_files.abort_on_exception = true
+    # writing_files.join
+
 	end
 
 	private
