@@ -1,3 +1,4 @@
+require File.expand_path('../helpers/helper',File.dirname(__FILE__))
 # input:
 # - two enumerators returning elements sorted by their key
 # - block calculating the key for each element
